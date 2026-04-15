@@ -1,0 +1,41 @@
+--@name
+--@author
+--@shared
+
+visualizerNames = {}
+visualizerNamesLookup = {}
+
+if SERVER then
+    net.receive('receiveVisualizerNames', function()
+        visualizerNames = net.readTable()
+        visualizerNamesLookup = net.readTable()
+        
+        net.start('broadcastVisualizerNames')
+            net.writeTable(visualizerNames)
+            net.writeTable(visualizerNamesLookup)
+        net.send()
+    end)
+    
+elseif CLIENT then
+    if player() == owner() then
+        local names = select(1, file.findInGame('data/starfall/audio visualizer/visualizers/*'))
+        
+        local tbl = {}
+        local lookup = {}
+        for _, name in ipairs(names) do
+            local newName = string.stripExtension(name)
+            tbl[#tbl + 1] = newName
+            lookup[newName] = true
+        end
+        
+        net.start('receiveVisualizerNames')
+            net.writeTable(tbl)
+            net.writeTable(lookup)
+        net.send()
+    end
+    
+    net.receive('broadcastVisualizerNames', function()
+        visualizerNames = net.readTable()
+        visualizerNamesLookup = net.readTable()
+    end)
+end

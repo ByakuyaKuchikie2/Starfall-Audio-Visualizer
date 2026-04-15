@@ -1,0 +1,90 @@
+--@name
+--@author
+--@client
+
+--DO NOT USE TIMERS, they will break in this environment, use the provided visualizer timers instead :D
+--also be sure to add any holos/entities to the instance.entities table
+
+---INITIALIZE
+local instance = {}
+instance.hooks = {}
+instance.entities = {}
+
+--add hooks with this instead of hook.add
+--these cleanup hooks upon offloading
+local function addHook(type, name, cb) 
+    instance.hooks[name] = type
+    
+    hook.add(type, name, cb)
+end
+
+local function removeHook(type, name)
+    hook.remove(type, name)
+    instance.hooks[name] = nil
+end
+
+local function addTimer(name, delay, reps, cb)
+    if reps == 0 then reps = math.huge end
+    local co = coroutine.wrap(function()
+        for i=1, reps do
+            coroutine.wait(delay)
+            cb()
+        end
+        
+        removeHook("Think", "timer."..name)
+    end)
+    
+    addHook("Think", "timer."..name, co)
+end
+
+local simpleTimerID = 0
+local function addTimerSimple(delay, cb)
+    simpleTimerID = simpleTimerID + 1
+    timer("simple"..tostring(simpleTimerID), delay, 1, cb)
+end
+
+do --PUT YOUR CODE HERE
+    
+    local radius = 100
+    local particleSize = 384
+    
+    local glow04 = material.load("sprites/light_glow02_add")
+    
+    ---think hook basically
+    instance.think = function()
+        if not radio then return end
+        
+        audio = select(1, radio:getPlaying())
+        if not isValid(audio) then return end
+        
+        for i, freq in ipairs(fft) do
+            if cpuUsed() > cpuMax() or cpuAverage() > cpuMax() then return end -- yield
+            if freq > 0.015 then
+                local theta = math.rad((360/#fft)*i)
+                local x,y = radius * math.cos(theta), radius * math.sin(theta)
+                
+                local off = particleSize*0.00065104166666667
+                local part = newParticle(glow04, chip():localToWorld(Vector(x,y,0) + Vector(math.random(-off,off), math.random(-off,off), 0)), freq*particleSize, 0, 0, 0, 255, 0, 1)
+                
+                if not part then return end
+                part:setGravity(Vector(0,0,100))
+                part:setVelocity(Vector(math.random(-2,2),math.random(-2,2),freq*200))
+                part:setColor(Color(60*timer.curtime()%360 + i * 20,0.35,1):hsvToRGB())
+            end
+            
+        end
+    end
+    
+end --PUT YOUR CODE HERE
+
+
+
+
+
+---END
+
+
+instance.removed = function()
+    
+end
+return instance

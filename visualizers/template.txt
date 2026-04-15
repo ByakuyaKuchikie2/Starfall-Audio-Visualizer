@@ -1,0 +1,60 @@
+--@name
+--@author
+--@client
+
+--DO NOT USE TIMERS, they will break in this environment, use the provided visualizer timers instead :D
+--also be sure to add any holos/entities to the instance.entities table
+
+---INITIALIZE
+local instance = {}
+instance.hooks = {}
+instance.entities = {}
+
+--add hooks with this instead of hook.add
+--these cleanup hooks upon offloading
+local function addHook(type, name, cb) 
+    instance.hooks[name] = type
+    
+    hook.add(type, name, cb)
+end
+
+local function removeHook(type, name)
+    hook.remove(type, name)
+    instance.hooks[name] = nil
+end
+
+local function addTimer(name, delay, reps, cb)
+    if reps == 0 then reps = math.huge end
+    local co = coroutine.wrap(function()
+        for i=1, reps do
+            coroutine.wait(delay)
+            cb()
+        end
+        
+        removeHook("Think", "timer."..name)
+    end)
+    
+    addHook("Think", "timer."..name, co)
+end
+
+local simpleTimerID = 0
+local function addTimerSimple(delay, cb)
+    simpleTimerID = simpleTimerID + 1
+    timer("simple"..tostring(simpleTimerID), delay, 1, cb)
+end
+
+do --PUT YOUR CODE HERE
+    ---think hook basically
+    instance.think = function()
+        
+    end
+    
+end --PUT YOUR CODE HERE
+
+
+
+
+
+---END
+
+return instance

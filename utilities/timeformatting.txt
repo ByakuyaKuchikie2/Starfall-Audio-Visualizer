@@ -1,0 +1,26 @@
+--@name
+--@author
+--@shared
+
+function formatTime(time)
+    local minWithSeconds = true
+    
+    local sec = time % 60
+    local min = math.floor(time/60)
+    local hour = math.floor(min/60)
+    
+    min = min%60
+    
+    if hour >= 1 then
+        if hour > 1000 then
+            return "inf"
+        end
+        return string.format("%02d:%02d:%02d", hour, min, sec)
+    end
+    
+    if minWithSeconds then
+        return string.format("%02d:%02d", min, sec)
+    else
+        return string.format("%02d", sec)
+    end
+end

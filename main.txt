@@ -1,0 +1,186 @@
+--@name
+--@author
+--@shared
+
+---CONFIG
+    fftCount = 96
+    fftFrameRate = 10
+    defaultVisualizer = 'template'
+    fftSmoothness = 15 -- lower the smoother
+    
+--@includedir utilities
+requiredir('utilities')
+
+--run only client after this
+if SERVER then return end
+
+
+---get radio base
+--@include bk_lib/radio_base.txt
+radio = require('bk_lib/radio_base.txt')
+
+--@includedir visualizers
+
+--more instance stuff down below
+instance = {}
+
+function instance:offload()
+    local hooks = self.hooks
+    
+    if hooks then
+        for name, type in pairs(hooks) do
+            hook.remove(type, name)
+        end
+    end
+    
+    local entities = self.entities
+    
+    if entities then
+        local n = 0
+        for _, ent in pairs(entities) do
+            if not isValid(ent) then continue end
+            ent:remove()
+            n = n + 1
+        end
+        
+        print(string.format("removed %d entities", n))
+    end
+    
+    if self.removed then
+        self.removed()
+    end
+end
+
+function instance:hotload(name)
+    self:offload()
+    
+    local data = dofile(string.format('visualizers/%s.txt', name))
+    
+    self.hooks = data.hooks
+    self.think = data.think
+    self.entities = data.entities
+    self.removed = data.removed
+end
+
+---HANDLE NET MESSAGES
+hook.add("Net", "", function(name, len, ply) 
+    if name == 'play' then
+        radio:play(net.readString())
+--[[
+        local customTitle = net.readString()
+        if customTitle and customTitle ~= '' then
+            radio.miscs.customTitle = customTitle
+        end
+]]
+    elseif name == 'skip' then
+        radio:skip()
+    elseif name == 'instance.hotload' then
+        local name = net.readString()
+        instance:hotload(name)
+    end
+end)
+
+radio:setFade(512, 1024)
+
+radio.miscs = {}
+radio.miscs.stringTime = ""
+radio:addHook("Think", "get time", function()
+    local audio = select(1, radio:getPlaying())
+    local playing = radio:isPlaying() and isValid(audio)
+    
+    radio.miscs.playing = playing
+    if not playing then return end
+    radio.miscs.stringTime = string.format("%s / %s", formatTime(audio:getTime()), formatTime(audio:getLength()))
+end)
+
+---GET AUDIO TAGS
+radio:addHook("onPlay", "1", function()
+    local tagTimeout, delay = timer.curtime(), 1
+    radio:addHook("Think", "waitForTags", function()
+        if tagTimeout+delay < timer.curtime() then radio:removeHook("Think", "waitForTags") end
+        
+        local tags = select(1, radio:getPlaying()):getTagsID3()
+        
+        if tags then
+            radio.miscs.tags = tags
+            radio:removeHook("Think", "waitForTags")
+        end
+    end)
+end)
+
+---INVALIDATE
+radio:addHook("onEnd", "1", function()
+    radio.miscs.tags = nil
+    radio.miscs.stringTime = ""
+    radio.miscs.invalidateFFT = true
+    radio.miscs.customTitle = nil
+end)
+
+---SET NAME
+radio:addHook("Think", "set name", function()
+    local name = ''
+    if not radio.miscs.playing then
+        name = 'Nothing playing'
+    end
+    
+    if radio.miscs.customTitle then
+        name = radio.miscs.customTitle
+    elseif radio.miscs.tags then
+        name = string.format("%s - %s", radio.miscs.tags.artist, radio.miscs.tags.title)
+    end
+    
+    if radio.miscs.stringTime ~= "" then
+        if name ~= '' then
+            name = name .. '\n' .. radio.miscs.stringTime
+        else
+            name = radio.miscs.stringTime
+        end
+    end
+    
+    if not radio:queueIsEmpty() then
+        if #radio:getQueue() then
+            name = name .. '\n' .. string.format('%d songs in queue', radio:getQueue():count())
+        else
+            name = name .. '\n1 song in queue'
+        end
+    end
+    
+    setName(name)
+end)
+
+---Getting The FFT
+fft,sfft = {},{}
+for i=1, fftCount do fft[i] = 0; sfft[i] = 0 end
+radio.miscs.invalidateFFT = false
+radio:addHook("Think", "getFFT", function()
+    if not radio.miscs.playing or not log10fft then
+        if radio.miscs.invalidateFFT then
+            radio.miscs.invalidateFFT = false
+            for i=1, fftCount do fft[i] = 0; sfft[i] = 0 end
+        end
+        
+        return 
+    end
+    
+    local audio = select(1, radio:getPlaying())
+    if not isValid(audio) then return end
+    
+    fft = log10fft(audio:getFFT(5))
+    for i=1, fftCount do
+        sfft[i] = math.lerp(fftSmoothness * timer.frametime(), sfft[i], fft[i])
+    end
+        
+end)
+
+---Visualizer Instance 
+instance:hotload(defaultVisualizer)
+
+local lastThink = timer.curtime()
+hook.add("Think", "instance.think", function()
+    if not instance or not instance.think then return end
+    
+    if lastThink + (1/fftFrameRate) > timer.curtime() then return end
+    lastThink = timer.curtime()
+    
+    instance.think()
+end)

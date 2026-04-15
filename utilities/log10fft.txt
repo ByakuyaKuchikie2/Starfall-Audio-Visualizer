@@ -1,0 +1,70 @@
+--@name log10fft
+--@author
+--@client
+
+-- setup stuff for logarithmic fft
+local bands = fftCount
+
+bandRanges = {}
+local function buildLogBands(minBin, maxBin, bands)
+    local binStart = minBin
+    local denom = math.max(bands - 1, 1)
+
+    for band = 0, bands - 1 do
+        local t = band / denom
+
+        -- log spaced bin end
+        local binEndFloat = minBin * math.pow(maxBin / minBin, t)
+        local binEnd = math.floor(binEndFloat + 0.5)
+
+        if binEnd <= binStart then
+            binEnd = binStart + 1
+        end
+        if binEnd > maxBin then
+            binEnd = maxBin
+        end
+
+        bandRanges[band + 1] = {
+            start = binStart,
+            stop  = binEnd,
+        }
+
+        binStart = binEnd + 1
+        if binStart > maxBin then break end
+    end
+end
+
+buildLogBands(1, 1024, bands)
+function log10fft(fft)
+    local out = {}
+    local maxIdx = #fft
+
+    for i = 1, #bandRanges do
+        local r = bandRanges[i]
+        local s = 0
+        local count = 0
+
+        -- Clamp to actual FFT length
+        local start = math.min(r.start, maxIdx)
+        local stop  = math.min(r.stop, maxIdx)
+
+        for bin = start, stop do
+            local v = fft[bin]
+            if v ~= nil then
+                s = s + v
+                count = count + 1
+            end
+        end
+
+        if count == 0 then
+            out[i] = 0
+        else
+            local binCount = count
+            local scale = 10 + binCount
+            local avg = s / binCount
+            out[i] = avg / math.max(math.log10(scale), 1e-6)
+        end
+    end
+
+    return out
+end

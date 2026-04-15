@@ -1,0 +1,137 @@
+--@name
+--@author
+--@server
+
+--[[
+    Create commands dynamically
+    
+    commands.yourcommandname = {function, help description, help arguments}
+    ex. commands.test = {function(ply,args) print(ply) end, "test command", {"arg1", "arg2"}}
+    
+    you can also make owner only commands by prepending your command with .owneronly
+    ex. commands.owneronly.test = {function(ply,args) print(ply) end, "test command", {"arg1", "arg2"}}
+]]
+local commands = {} --Player Commands
+commands.owneronly = {} --Owner Commands
+
+commands.request = {
+    function(ply, args)
+        local url = args[2]
+        if not url then return end
+        print("submitting entry")
+        
+        net.start('play')
+            net.writeString(url)
+            if args[3] then
+                local customTitle = table.concat(args,' ', 3)
+                net.writeString(customTitle)
+            end
+        net.send()
+    end,
+    "Play a song from a url",
+    {"url"}
+}
+
+--alias of request
+commands.play = commands.request
+
+commands.owneronly.skip = {
+    function(ply, args)
+        net.start('skip')
+        net.send()
+    end,
+    "Skips the currently playing song"
+}
+
+commands.owneronly.listVisualizers = {
+    function(ply, args)
+        for _, name in ipairs(visualizerNames) do
+            print(name)
+        end
+    end,
+    "List all the visualizers"
+}
+
+commands.owneronly.load = {
+    function(ply, args) 
+        local visName = args[2]
+        if not visualizerNamesLookup[visName] then print(string.format("no visualizer named '%s'!", visName)); return end
+        --instance:hotload(visName)
+        net.start('instance.hotload')
+            net.writeString(visName)
+        net.send()
+    end,
+    "Loads a new visualizer",
+    {"name"}
+}
+
+
+
+---DO NOT EDIT PAST THIS
+commands.help = {
+    function(ply, args)
+        print("List of commands:")
+        
+        for name, tbl in pairs(commands.owneronly) do
+            local arguments = ""
+            if tbl[3] then
+                for _, arg in ipairs(tbl[3]) do
+                    arguments = arguments .. string.format(' [%s]', arg)
+                end
+            end
+            print(string.format("[OWNER ONLY] .%s%s -> %s", name, arguments, tbl[2]))
+        end
+        for name, tbl in pairs(commands) do
+            if name == 'owneronly' then continue end
+            local arguments = ""
+            if tbl[3] then
+                for _, arg in ipairs(tbl[3]) do
+                    arguments = arguments .. string.format(' [%s]', arg)
+                end
+            end
+            print(string.format(".%s%s -> %s", name, arguments, tbl[2]))
+        end
+    end,
+    "Shows all commands"
+}
+
+local function prefixIsValid(prefixes, text)
+    local individual_prefixes = string.explode("", prefixes)
+    for _, prefix in ipairs(individual_prefixes) do
+        if text[1] == prefix then
+            return true
+        end
+    end
+    
+    return false
+end
+
+hook.add("PlayerSay", "chat commands", function(ply, text)
+    if not isValid(ply) or not text then return end
+    
+    if prefixIsValid("!/.", text) then
+        local msg = string.sub(text, 2)
+        local args = string.explode(" ", msg)
+        
+        if ply == owner() then
+            for cmd, tbl in pairs(commands.owneronly) do
+                local func = tbl[1]
+                
+                if string.lower(args[1]) == string.lower(cmd) then
+                    func(ply, args)
+                end
+            end
+        end
+        
+        for cmd, tbl in pairs(commands) do
+            if cmd == owneronly then continue end
+            local func = tbl[1]
+            
+            if string.lower(args[1]) == string.lower(cmd) then
+                func(ply, args)
+            end
+        end
+        
+        return ""
+    end
+end)

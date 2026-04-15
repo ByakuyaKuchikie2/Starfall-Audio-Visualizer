@@ -1,0 +1,19 @@
+--@name
+--@author
+--@client
+
+-- simple particle effect system/function
+local emitters = {}
+for i=1, 8 do
+    table.insert(emitters, particle.create(Vector(), false))
+end
+
+function newParticle(mat, pos, startsize, endsize, startlength, endlength, startalpha, endalpha, dietime)
+    local emitterIndex = 1
+    while emitters[emitterIndex]:getParticlesLeft() == 0 do
+        emitterIndex = emitterIndex + 1
+        if emitterIndex > 8 then return end
+    end
+    local part = emitters[emitterIndex]:add(mat, pos, startsize,endsize,startlength,endlength,startalpha,endalpha,dietime)
+    return part
+end

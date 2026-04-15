@@ -1,0 +1,107 @@
+--@name
+--@author
+--@client
+
+--DO NOT USE TIMERS, they will break in this environment, use the provided visualizer timers instead :D
+--also be sure to add any holos/entities to the instance.entities table
+
+---INITIALIZE
+local instance = {}
+instance.hooks = {}
+instance.entities = {}
+
+--add hooks with this instead of hook.add
+--these cleanup hooks upon offloading
+local function addHook(type, name, cb) 
+    instance.hooks[name] = type
+    
+    hook.add(type, name, cb)
+end
+
+local function removeHook(type, name)
+    hook.remove(type, name)
+    instance.hooks[name] = nil
+end
+
+local function addTimer(name, delay, reps, cb)
+    if reps == 0 then reps = math.huge end
+    local co = coroutine.wrap(function()
+        for i=1, reps do
+            coroutine.wait(delay)
+            cb()
+        end
+        
+        removeHook("Think", "timer."..name)
+    end)
+    
+    addHook("Think", "timer."..name, co)
+end
+
+local simpleTimerID = 0
+local function addTimerSimple(delay, cb)
+    simpleTimerID = simpleTimerID + 1
+    timer("simple"..tostring(simpleTimerID), delay, 1, cb)
+end
+
+do --PUT YOUR CODE HERE
+    
+    local holo = hologram.create(chip():getPos(), chip():getAngles(), "models/holograms/plane.mdl", Vector(120)/12)
+    holo:setParent(chip())
+    table.insert(instance.entities, holo)
+    
+    render.createRenderTarget("rt")
+    local mat = material.create("UnlitGeneric")
+    mat:setTextureRenderTarget("$basetexture", "rt")
+    mat:setInt("$flags", 0x200000)
+    
+    holo:setMaterial("!" .. mat:getName())
+    
+    local level = 0
+    local yaw = 0
+    addHook("RenderOffscreen", "hi", function()
+        render.selectRenderTarget("rt")
+        render.clear(Color(0,0,0,0))
+    
+--[[
+        local level = level^3
+        local rx, ry = math.random(-8,8)*level, math.random(-8,8)*level
+        local m = Matrix()
+        m:translate(Vector(rx,ry,0))
+        render.pushMatrix(m)
+]]
+        
+        for i, v in ipairs(sfft) do
+            local fftValue = math.max(1, v * 1024)
+            
+            local theta = math.rad((360/fftCount)*i + yaw)
+            local x,y = (128+fftValue) * math.cos(theta), (128+fftValue) * math.sin(theta)
+            
+            render.drawRectRotated(512+x,512+y,12, fftValue*2, 90+math.deg(theta))
+        end
+    end)
+    
+    ---think hook basically
+    instance.think = function()
+        if not radio then return end
+        
+        local audio = select(1, radio:getPlaying())
+        if not isValid(audio) then return end
+        
+        local left, right = audio:getLevels()
+        level = math.lerp(15 * timer.frametime(), level, ((left+right)/2)^3)
+        yaw = yaw + level * 4
+        yaw = yaw % 360
+    end
+    
+end --PUT YOUR CODE HERE
+
+
+
+
+
+---END
+
+instance.removed = function()
+    render.destroyRenderTarget("rt")
+end
+return instance

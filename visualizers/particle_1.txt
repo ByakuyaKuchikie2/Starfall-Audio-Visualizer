@@ -1,0 +1,123 @@
+--@name
+--@author
+--@client
+
+--DO NOT USE TIMERS, they will break in this environment, use the provided visualizer timers instead :D
+--also be sure to add any holos/entities to the instance.entities table
+
+---INITIALIZE
+local instance = {}
+instance.hooks = {}
+instance.entities = {}
+
+--add hooks with this instead of hook.add
+--these cleanup hooks upon offloading
+local function addHook(type, name, cb) 
+    instance.hooks[name] = type
+    
+    hook.add(type, name, cb)
+end
+
+local function removeHook(type, name)
+    hook.remove(type, name)
+    instance.hooks[name] = nil
+end
+
+local function addTimer(name, delay, reps, cb)
+    if reps == 0 then reps = math.huge end
+    local co = coroutine.wrap(function()
+        for i=1, reps do
+            coroutine.wait(delay)
+            cb()
+        end
+        
+        removeHook("Think", "timer."..name)
+    end)
+    
+    addHook("Think", "timer."..name, co)
+end
+
+local simpleTimerID = 0
+local function addTimerSimple(delay, cb)
+    simpleTimerID = simpleTimerID + 1
+    timer("simple"..tostring(simpleTimerID), delay, 1, cb)
+end
+
+do --PUT YOUR CODE HERE
+    local glow04 = material.load("sprites/light_glow02_add")
+    
+    local holo = hologram.create(chip():localToWorld(Vector(0,0,100)), Angle(), "models/holograms/hq_sphere.mdl", -Vector(16))
+    holo:setNoDraw(true)
+    holo:setColor(Color(29,29,29,100))
+    holo:setParent(chip())
+    
+    table.insert(instance.entities, holo)
+    
+    particleSize = 384
+    
+    local fib = {}
+    local phi = math.pi * (3 - math.sqrt(5))
+    for i=1, fftCount do
+        
+        local y = 1 - (i / (fftCount - 1)) * 2
+        local radius = math.sqrt(1 - y * y)
+        
+        local theta = phi * i
+        local x = math.cos(theta)
+        local z = math.sin(theta)
+        
+        fib[i] = Vector(x,y,z)
+    end
+    
+    table.shuffle(fib)
+    
+    instance.think = function()
+        if not radio then return end
+        
+        audio = select(1, radio:getPlaying())
+        if not isValid(audio) then return end
+        
+        holo:setAngles(chip():localToWorldAngles(Angle(
+            15 * timer.curtime()%360,
+            -6.1323 * timer.curtime()%360,
+            -20 * timer.curtime()%360
+        )))
+        
+        local l,r = audio:getLevels()
+        level = (l+r)/2
+        
+        for i, freq in ipairs(fft) do
+            if cpuUsed() > cpuMax() or cpuAverage() > cpuMax() then return end -- yield
+            if freq > 0.015 then
+                
+                local off = particleSize*0.00065104166666667
+                
+                local size = freq * particleSize
+                size = size * (1+( level*2 ))
+                local fibDir = fib[i]:getRotated(holo:getAngles())
+                local part
+                if math.rand(0,1) > 0.9 then
+                    part = newParticle(glow04, holo:getPos() - (fibDir * size * 1) + Vector(math.random(-off,off), math.random(-off,off), 0), size, 0, size*4, size, 255, 0, 0.6 + 0.6*freq)
+                else
+                    part = newParticle(glow04, holo:getPos() - (fibDir * size * 0.5) + Vector(math.random(-off,off), math.random(-off,off), 0), size, 0, size, size*4, 255, 0, 0.6 + 0.6*freq)
+                end
+                part:setVelocity(fibDir * freq * 50)
+                
+                part:setColor(Color(60*timer.curtime()%360 + i * 20, 0.35, 1):hsvToRGB())
+            end
+            
+        end
+    end
+    
+end --PUT YOUR CODE HERE
+
+
+
+
+
+---END
+
+instance.removed = function()
+    
+end
+return instance
