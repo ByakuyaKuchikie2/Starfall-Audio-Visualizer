@@ -16,8 +16,7 @@ if SERVER then return end
 
 
 ---get radio base
---@include bk_lib/radio_base.txt
-radio = require('bk_lib/radio_base.txt')
+radio = require('utilities/radio_base.txt')
 
 --@includedir visualizers
 
@@ -74,6 +73,11 @@ hook.add("Net", "", function(name, len, ply)
 ]]
     elseif name == 'skip' then
         radio:skip()
+        
+    elseif name == 'volume' then
+        local n = net.readFloat()
+        radio:setVolume(n)
+        
     elseif name == 'instance.hotload' then
         local name = net.readString()
         instance:hotload(name)
@@ -165,7 +169,7 @@ radio:addHook("Think", "getFFT", function()
     local audio = select(1, radio:getPlaying())
     if not isValid(audio) then return end
     
-    fft = log10fft(audio:getFFT(5))
+    fft = log10fft(audio:getFFT(5)) -- 5 is pretty good for this log function
     for i=1, fftCount do
         sfft[i] = math.lerp(fftSmoothness * timer.frametime(), sfft[i], fft[i])
     end

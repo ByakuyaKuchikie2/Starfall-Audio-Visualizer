@@ -35,6 +35,19 @@ commands.request = {
 --alias of request
 commands.play = commands.request
 
+commands.volume = {
+    function(ply, args)
+        local n = tonumber(args[2])
+        if not n then return end
+        
+        net.start('volume')
+            net.writeFloat(math.clamp(n,0,10))
+        net.send(ply)
+    end,
+    "Change local volume of audio",
+    {"volume 0-10"}
+}
+
 commands.owneronly.skip = {
     function(ply, args)
         net.start('skip')
