@@ -58,7 +58,7 @@ radio.noblock = true
 radio.hooks = {
     think = {},
     onplay = {},
-    onpauseed = {},
+    onpaused = {},
     onend = {}
 }
 
