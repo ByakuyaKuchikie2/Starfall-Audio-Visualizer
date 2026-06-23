@@ -152,6 +152,13 @@ radio:addHook("Think", "set name", function()
     setName(name)
 end)
 
+---Stopsound fix
+timer.create("ssfix", 1, 0, function()
+    local audio = select(1, radio:getPlaying())
+    if not isValid(audio) then return end
+    if audio:getState() == GMOD_CHANNEL.STOPPED then audio:play() end
+end)
+
 ---Getting The FFT
 fft,sfft = {},{}
 for i=1, fftCount do fft[i] = 0; sfft[i] = 0 end
