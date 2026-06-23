@@ -31,6 +31,10 @@
             Called when an audio has begun playing
             Arguments: None
             
+        - onPaused
+            Called when radio was paused/resumed
+            Arguments: None
+            
         - onended
             Called when an audio has been ended, skipped, or stopped
             Arguments: None
@@ -54,6 +58,7 @@ radio.noblock = true
 radio.hooks = {
     think = {},
     onplay = {},
+    onpauseed = {},
     onend = {}
 }
 
@@ -124,6 +129,7 @@ function radio:pause(state)
         self.audio:play()
     end
     
+    execHooks('onPause')
     return self.playing
 end
 
