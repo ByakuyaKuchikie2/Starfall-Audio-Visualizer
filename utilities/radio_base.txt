@@ -33,7 +33,7 @@
             
         - onPaused
             Called when radio was paused/resumed
-            Arguments: None
+            Arguments: IsPaused
             
         - onended
             Called when an audio has been ended, skipped, or stopped
@@ -62,10 +62,10 @@ radio.hooks = {
     onend = {}
 }
 
-local function execHooks(type)
+local function execHooks(type, ...)
     type = string.lower(type)
     for name, func in pairs(radio.hooks[type]) do
-        func()
+        func(...)
     end
 end
 
@@ -129,7 +129,7 @@ function radio:pause(state)
         self.audio:play()
     end
     
-    execHooks('onPause')
+    execHooks('onPause', state)
     return self.playing
 end
 
