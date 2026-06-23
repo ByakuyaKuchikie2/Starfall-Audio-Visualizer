@@ -35,7 +35,7 @@
             Called when radio was paused/resumed
             Arguments: IsPaused
             
-        - onended
+        - onEnd
             Called when an audio has been ended, skipped, or stopped
             Arguments: None
 
@@ -120,6 +120,7 @@ function radio:pause(state)
         self.playing = state
     end
     
+    execHooks('onPaused', self.playing)
     if isValid(self.audio) then 
         if self.playing then
             self.audio:pause()
@@ -129,7 +130,6 @@ function radio:pause(state)
         self.audio:play()
     end
     
-    execHooks('onPause', state)
     return self.playing
 end
 
@@ -177,7 +177,7 @@ function radio:stop()
     self.url = ''
     
     self.queue:clear()
-    execHooks('onend')
+    execHooks('onEnd')
 end
 
 function radio:skip()
@@ -186,7 +186,7 @@ function radio:skip()
     end
     
     self:next()
-    execHooks('onend')
+    execHooks('onEnd')
 end
 
 function radio:addHook(type, name, func)
