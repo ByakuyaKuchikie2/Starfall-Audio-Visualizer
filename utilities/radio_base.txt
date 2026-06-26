@@ -127,12 +127,7 @@ function radio:pause(state)
         end
     end
     
-    if not state then
-        self.playing = not self.playing
-    else
-        self.playing = state
-    end
-    
+    self.playing = state or not self.playing
     execHooks('onPaused', self.playing)
     
     return self.playing
