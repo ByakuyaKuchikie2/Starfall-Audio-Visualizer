@@ -119,13 +119,6 @@ function radio:next()
 end
 
 function radio:pause(state)
-    if not state then
-        self.playing = not self.playing
-    else
-        self.playing = state
-    end
-    
-    execHooks('onPaused', self.playing)
     if isValid(self.audio) then 
         if self.playing then
             self.audio:pause()
@@ -134,6 +127,14 @@ function radio:pause(state)
         
         self.audio:play()
     end
+    
+    if not state then
+        self.playing = not self.playing
+    else
+        self.playing = state
+    end
+    
+    execHooks('onPaused', self.playing)
     
     return self.playing
 end
