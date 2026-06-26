@@ -54,6 +54,7 @@ radio.volume = 0.35
 radio.fade = {128,256}
 radio.url = ''
 radio.noblock = true
+radio.entity = chip()
 
 radio.hooks = {
     think = {},
@@ -71,6 +72,10 @@ end
 
 function radio:useNoblock(state)
     self.noblock = state
+end
+
+function radio:setParent(ent)
+    self.parent = ent
 end
 
 function radio:play(url)
@@ -211,7 +216,7 @@ end
 
 function radio:think() -- can be overriden
     if isValid(self.audio) and self.playing then
-        self.audio:setPos(chip():getPos())
+        self.audio:setPos((self.parent or chip()):getPos())
         
         local time, duration = self.audio:getTime(), self.audio:getLength()
         if time >= duration then
