@@ -122,10 +122,9 @@ function radio:pause(state)
     if isValid(self.audio) then 
         if self.playing then
             self.audio:pause()
-            return self.playing
+        else
+            self.audio:play()
         end
-        
-        self.audio:play()
     end
     
     if not state then
