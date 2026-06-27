@@ -4,7 +4,7 @@
     Radio lib by ByakuyaKuchiki
     functionality
         :play(string)               - plays/queues an audio
-        :pause()                    - pauses/resumes the radio
+        :pause(state)               - pauses/resumes the radio
         :next()                     - plays the next audio in the queue
         :isPlaying()                - returns if the radio is playing an audio
         :getPlaying()               - returns the currently playing audio and its url
@@ -119,8 +119,8 @@ function radio:next()
     self:play(url)
 end
 
-function radio:pause(state) --true to pause, false to unpause
-    local shouldPlay = (state == nil) and not self.playing or not state
+function radio:pause(state) --false to pause, true to unpause
+    local shouldPlay = (state == nil) and not self.playing or state
 
     self.playing = shouldPlay
 
