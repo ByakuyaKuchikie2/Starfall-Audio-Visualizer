@@ -41,13 +41,11 @@
             Arguments: None
 
 ]]
---@name bk_lib/radio_base_fork.txt
---@author
 --@client
---@include bk_lib/queue.txt
+--@include audio_visualizer/utilities/queue.txt
 local radio = {}
 radio.__index = radio
-radio.queue = require('bk_lib/queue.txt')
+radio.queue = require('audio_visualizer/utilities/queue.txt')
 
 radio.audio = nil
 radio.playing = false
