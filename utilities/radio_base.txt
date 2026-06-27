@@ -9,6 +9,7 @@
         :isPlaying()                - returns if the radio is playing an audio
         :getPlaying()               - returns the currently playing audio and its url
         :getQueue()                 - returns the queue
+        :queueIsEmpty()             - returns if queue is empty
         :setVolume(number)          - sets the volume
         :stop()                     - stops the audio and clears the queue
         :setFade(number, number)    - sets the fade/distance of the audio
@@ -118,19 +119,23 @@ function radio:next()
     self:play(url)
 end
 
-function radio:pause(state)
+function radio:pause(state) --true to pause, false to unpause
+    local shouldPlay = (state == nil) and not self.playing or not state
+
+    self.playing = shouldPlay
+
     if isValid(self.audio) then 
-        if self.playing then
-            self.audio:pause()
-        else
+        if shouldPlay then
             self.audio:play()
+        else
+            self.audio:pause()
         end
     end
     
-    self.playing = state or not self.playing
-    execHooks('onPaused', self.playing)
+    local isPaused = not shouldPlay
+    execHooks('onPaused', isPaused)
     
-    return self.playing
+    return isPaused
 end
 
 function radio:isPlaying() 
